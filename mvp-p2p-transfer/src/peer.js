@@ -11,6 +11,7 @@ export class PeerConnection {
     this.pc = null;
     this.dataChannel = null;
     this.onConnected = null;
+    this.onChannelReady = null;
     this.onError = null;
     this.onLog = null;
     this.onOfferReady = null;
@@ -61,6 +62,11 @@ export class PeerConnection {
       this.dataChannel = e.channel;
       this.setupDataChannel();
     };
+    
+    // For sender: create data channel immediately
+    if (this.role === 'sender') {
+      this.createDataChannel('file-transfer');
+    }
   }
   
   createDataChannel(label) {
@@ -72,7 +78,13 @@ export class PeerConnection {
   setupDataChannel() {
     if (!this.dataChannel) return;
     this.dataChannel.binaryType = 'arraybuffer';
-    this.dataChannel.onopen = () => this.log('Channel open');
+    this.dataChannel.onopen = () => {
+      this.log('Channel open');
+      // Signal that channel is ready for file transfer
+      if (this.role === 'receiver' && this.onChannelReady) {
+        this.onChannelReady();
+      }
+    };
     this.dataChannel.onclose = () => this.log('Channel closed');
     this.dataChannel.onerror = (e) => this.log(`Error: ${e.message || e}`);
   }

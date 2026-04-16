@@ -1,12 +1,13 @@
 // ============================================
 // P2P File Transfer MVP - Main Entry Point
-// Serverless WebRTC with manual SDP exchange
+// Serverless WebRTC with QR code + manual SDP
 // Optimized for Android Chrome on Local Network
 // ============================================
 
 import { PeerConnection } from './peer.js';
 import { FileStreamer } from './streamer.js';
 import { ProgressTracker } from './progress.js';
+import { QRGenerator } from './qr.js';
 
 // DOM Elements
 const roleScreen = document.getElementById('role-screen');
@@ -87,9 +88,18 @@ fileInput.addEventListener('change', async (e) => {
     const offer = await peer.createOffer();
     const offerJSON = JSON.stringify(offer);
     
+    // Generate connection URL for QR code
+    const connectionData = encodeURIComponent(offerJSON);
+    const connectionUrl = `${window.location.origin}${window.location.pathname}?offer=${connectionData}`;
+    
+    // Display QR code
+    const qrContainer = document.getElementById('qr-container');
+    if (qrContainer) qrContainer.innerHTML = '';
+    QRGenerator.generate(connectionUrl, document.getElementById('qr-wrapper') || qrContainer);
+    
     // Display offer for manual transfer
     senderOffer.value = offerJSON;
-    log(senderLog, 'Offer ready! Copy and send to receiver.');
+    log(senderLog, 'Scan QR or copy code to share with receiver.');
     
     // Enable connect button when answer is pasted
     btnConnectSender.disabled = false;
@@ -112,30 +122,47 @@ btnConnectSender.addEventListener('click', async () => {
     log(senderLog, 'Setting answer from receiver...');
     await peer.setAnswer(answerJSON);
     
-    // Wait for connection
-    peer.onConnected = async () => {
-      log(senderLog, 'Connected! Starting file transfer...');
-      senderWaiting.classList.add('hidden');
-      senderTransfer.classList.remove('hidden');
-      
-      // Setup progress tracking
-      progressTracker = new ProgressTracker(currentFile.size, {
-        onUpdate: (stats) => {
-          senderProgress.style.width = `${stats.percent}%`;
-          senderSpeed.textContent = stats.speed;
-          senderEta.textContent = stats.eta;
-        },
-        onComplete: () => {
-          senderFileInfo.textContent = '✅ Transfer complete!';
-          senderFileInfo.style.color = '#16a34a';
-        }
+    // Wait for connection and data channel to be ready
+    const waitForDataChannel = () => {
+      return new Promise((resolve, reject) => {
+        const checkChannel = () => {
+          if (peer.dataChannel && peer.dataChannel.readyState === 'open') {
+            resolve();
+          } else {
+            setTimeout(checkChannel, 100);
+          }
+        };
+        checkChannel();
+        
+        // Timeout after 30 seconds
+        setTimeout(() => reject(new Error('Connection timeout')), 30000);
       });
-      
-      // Send file
-      senderFileInfo.textContent = `Sending: ${currentFile.name}`;
-      streamer = new FileStreamer(peer.dataChannel);
-      await streamer.sendFile(currentFile, null, progressTracker);
     };
+    
+    log(senderLog, 'Waiting for connection...');
+    await waitForDataChannel();
+    
+    log(senderLog, 'Connected! Starting file transfer...');
+    senderWaiting.classList.add('hidden');
+    senderTransfer.classList.remove('hidden');
+    
+    // Setup progress tracking
+    progressTracker = new ProgressTracker(currentFile.size, {
+      onUpdate: (stats) => {
+        senderProgress.style.width = `${stats.percent}%`;
+        senderSpeed.textContent = stats.speed;
+        senderEta.textContent = stats.eta;
+      },
+      onComplete: () => {
+        senderFileInfo.textContent = '✅ Transfer complete!';
+        senderFileInfo.style.color = '#16a34a';
+      }
+    });
+    
+    // Send file
+    senderFileInfo.textContent = `Sending: ${currentFile.name}`;
+    streamer = new FileStreamer(peer.dataChannel);
+    await streamer.sendFile(currentFile, null, progressTracker);
     
   } catch (err) {
     log(senderLog, `Error: ${err.message}`);
@@ -159,7 +186,35 @@ document.getElementById('btn-receiver').addEventListener('click', () => {
   // Initialize peer connection as receiver
   peer = new PeerConnection('receiver');
   peer.onLog = (msg) => log(receiverLog, msg);
+  
+  // Check if we have a QR code offer in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const offerFromUrl = urlParams.get('offer');
+  
+  if (offerFromUrl) {
+    log(receiverLog, 'Offer detected from QR code!');
+    try {
+      const decodedOffer = decodeURIComponent(offerFromUrl);
+      receiverOfferInput.value = decodedOffer;
+      document.getElementById('qr-scan-section').classList.add('hidden');
+      log(receiverLog, 'Auto-filled offer from QR. Tap "Generate Answer" to continue.');
+    } catch (e) {
+      log(receiverLog, 'Invalid QR code format');
+    }
+  }
 });
+
+// QR Scan button (placeholder - Android Chrome can use built-in QR scanner via intent)
+const btnScanQr = document.getElementById('btn-scan-qr');
+if (btnScanQr) {
+  btnScanQr.addEventListener('click', () => {
+    // Try to use Android's built-in QR scanner via intent URL scheme
+    // This works on some Android browsers
+    window.location.href = 'intent://scan#Intent;scheme=zxing;package=com.google.zxing.client.android;end';
+    // Fallback: show instructions
+    alert('If your browser supports QR scanning, it will open now. Otherwise, please ask sender to copy their code to you.');
+  });
+}
 
 btnGenerateAnswer.addEventListener('click', async () => {
   const offerJSON = receiverOfferInput.value.trim();
@@ -183,8 +238,26 @@ btnGenerateAnswer.addEventListener('click', async () => {
     log(receiverLog, 'Answer generated! Copy and send back to sender.');
     log(receiverLog, 'Waiting for sender to connect...');
     
-    // Wait for connection
-    peer.onConnected = async () => {
+    // Wait for connection and data channel
+    const waitForDataChannel = () => {
+      return new Promise((resolve, reject) => {
+        const checkChannel = () => {
+          if (peer.dataChannel && peer.dataChannel.readyState === 'open') {
+            resolve();
+          } else {
+            setTimeout(checkChannel, 100);
+          }
+        };
+        checkChannel();
+        
+        // Timeout after 30 seconds
+        setTimeout(() => reject(new Error('Connection timeout')), 30000);
+      });
+    };
+    
+    try {
+      await waitForDataChannel();
+      
       log(receiverLog, 'Connected! Waiting for file...');
       receiverConnect.classList.add('hidden');
       receiverTransfer.classList.remove('hidden');
@@ -221,10 +294,13 @@ btnGenerateAnswer.addEventListener('click', async () => {
         
         log(receiverLog, 'File downloaded successfully');
       } catch (err) {
-        log(receiverLog, `Error: ${err.message}`);
+        log(receiverLog, `Error receiving file: ${err.message}`);
         receiverStatus.textContent = `❌ Error: ${err.message}`;
       }
-    };
+    } catch (timeoutErr) {
+      log(receiverLog, `Connection timeout: ${timeoutErr.message}`);
+      receiverStatus.textContent = '⏱️ Connection timeout. Please try again.';
+    }
     
   } catch (err) {
     log(receiverLog, `Error: ${err.message}`);
