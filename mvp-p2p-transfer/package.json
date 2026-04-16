@@ -1,0 +1,14 @@
+{
+  "name": "p2p-file-transfer-mvp",
+  "version": "1.0.0",
+  "description": "MVP: P2P File Transfer for Android via WebRTC (Local Network)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
