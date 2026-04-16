@@ -1,137 +1,101 @@
 # P2P File Transfer MVP
 
-A serverless, offline-capable web application for peer-to-peer file transfer between Android devices using WebRTC DataChannels over local Wi-Fi.
+Serverless peer-to-peer file transfer for Android browsers using WebRTC DataChannels. No external servers, no cloud - just direct device-to-device transfer over local Wi-Fi.
 
 ## Features
 
-- **Zero External Dependencies**: No cloud servers, CDNs, or third-party APIs
-- **WebRTC DataChannels**: Direct P2P transfer over local network
-- **Serverless Signaling**: Manual SDP exchange (copy/paste connection codes)
-- **PWA Ready**: Installable to home screen, works offline
-- **Chunked Transfer**: Memory-safe streaming for large files
-- **Real-time Progress**: Speed, ETA, and completion status
+✅ **Zero Dependencies** - Pure vanilla JavaScript, no external libraries  
+✅ **Serverless** - Manual SDP exchange via copy/paste or QR code URL  
+✅ **WebRTC DataChannels** - Fast, direct P2P transfer over local network  
+✅ **Chunked Streaming** - Memory-safe 16KB chunks with progress tracking  
+✅ **PWA Ready** - Installable, works offline, survives network drops  
+✅ **Mobile-First UI** - Lightweight (<50KB gzipped), responsive design  
+✅ **QR Code Support** - Visual placeholder with tap-to-copy URL  
 
 ## Quick Start
 
-### Development
+### Deploy to GitHub Pages
 
+1. Push `dist/` folder to a `gh-pages` branch:
 ```bash
 cd mvp-p2p-transfer
-npm install
-npm run dev -- --host 0.0.0.0
+git checkout --orphan gh-pages
+git reset --hard
+cp -r dist/* .
+git add .
+git commit -m "Deploy P2P File Transfer"
+git push origin gh-pages --force
 ```
 
-### Production Build
+2. Enable GitHub Pages in repo settings → Pages → Source: `gh-pages` branch
+
+3. Access at: `https://yourusername.github.io/repo-name/`
+
+### Local Development
 
 ```bash
+npm install
+npm run dev
 npm run build
-# Output in ./dist folder
+npm run preview
 ```
 
-### Running on Mobile Devices
+### HTTPS Setup (Required for Mobile)
 
-1. **Start HTTPS server** (required for WebRTC):
-   ```bash
-   # Option A: Using mkcert for local HTTPS
-   mkcert -install
-   mkcert localhost
-   npx vite preview --host 0.0.0.0 --https --key localhost-key.pem --cert localhost.pem
-   
-   # Option B: Use ngrok for tunneling
-   ngrok http 4173
-   ```
+WebRTC requires secure context (HTTPS). For local testing:
 
-2. **Connect both devices to same Wi-Fi network**
-
-3. **Open app on both devices**
+```bash
+mkcert -install
+mkcert localhost
+npx vite preview --host 0.0.0.0 --https --key localhost-key.pem --cert localhost.pem
+```
 
 ## Usage Flow
 
-### Sender:
-1. Tap "I'm Sending"
+### Sender Device
+1. Open app → Tap **"I'm Sending"**
 2. Select file to transfer
-3. Copy the generated "Offer" code
-4. Send offer code to receiver (via messaging app, etc.)
-5. Wait for receiver to send back "Answer" code
-6. Paste answer code and tap "Connect & Send"
-7. File transfers automatically
+3. Share connection via QR code (tap to copy URL) or copy offer code
+4. Wait for receiver to send back their answer code
+5. Paste answer code → Tap **"Connect & Send"**
+6. File transfers automatically with progress tracking
 
-### Receiver:
-1. Tap "I'm Receiving"
-2. Paste the "Offer" code from sender
-3. Tap "Generate Answer"
-4. Copy the generated "Answer" code
-5. Send answer code back to sender
-6. Wait for connection and file download
-7. File saves to Downloads folder
-
-## Architecture
-
-```
-src/
-├── main.js          # UI controller, event handlers
-├── peer.js          # WebRTC PeerConnection wrapper
-├── streamer.js      # File chunking and streaming
-├── progress.js      # Speed/ETA calculation
-└── qr.js            # QR code generation (optional)
-
-public/
-├── sw.js            # Service Worker for PWA
-└── manifest.json    # PWA manifest
-```
+### Receiver Device
+1. Open app → Tap **"I'm Receiving"**
+2. Scan sender's QR code (opens URL with embedded offer) or paste offer code
+3. Tap **"Generate Answer"**
+4. Copy answer code → Send back to sender
+5. Wait for connection → File downloads automatically
 
 ## Browser Compatibility
 
 | Feature | Android Chrome | iOS Safari |
 |---------|---------------|------------|
-| WebRTC DataChannel | ✅ Full support | ⚠️ Limited (iOS 14.3+) |
-| PWA Installation | ✅ Full support | ⚠️ Limited |
-| File System Access | ❌ Not supported | ❌ Not supported |
-| Download API | ✅ Works | ⚠️ Sandbox limitations |
+| WebRTC DataChannel | ✅ Full support | ⚠️ Limited |
+| PWA Installation | ✅ Full support | ⚠️ iOS 11.3+ |
+| File Download API | ✅ Full support | ⚠️ Sandbox limits |
 
-**Note**: This MVP is optimized for Android Chrome. iOS Safari has WebRTC limitations and stricter download sandboxing.
+**Note**: Optimized for Android Chrome. iOS Safari has WebRTC limitations.
 
-## Technical Details
+## Project Structure
 
-### WebRTC Connection
-- Uses STUN servers for NAT traversal
-- DataChannel with `ordered: false` for performance
-- Manual SDP exchange eliminates need for signaling server
-
-### File Transfer
-- 16KB chunks for memory efficiency
-- Binary transfer via ArrayBuffer
-- Streams API for large file handling
-
-### Security
-- Requires secure context (HTTPS/localhost)
-- Session-specific SDP codes (expire after use)
-- No data stored on servers (there are no servers!)
-
-## Limitations
-
-1. **Manual Signaling**: Users must copy/paste connection codes
-2. **Same Network**: Both devices need same Wi-Fi for optimal performance
-3. **File Size**: Very large files (>2GB) may hit browser memory limits
-4. **iOS Support**: Limited due to WebRTC and PWA restrictions
-
-## Troubleshooting
-
-### Connection fails
-- Ensure both devices on same Wi-Fi network
-- Check firewall settings allow WebRTC traffic
-- Verify HTTPS is enabled (required for WebRTC)
-
-### Slow transfer speeds
-- Move devices closer to Wi-Fi router
-- Reduce network congestion
-- Try 5GHz band if available
-
-### Download doesn't start
-- Check browser download permissions
-- On Android, check Downloads folder access
-- Clear browser cache and retry
+```
+mvp-p2p-transfer/
+├── index.html          # Main UI
+├── package.json        # Vite build config
+├── vite.config.js      # Relative paths for GitHub Pages
+├── src/
+│   ├── main.js         # UI controller
+│   ├── peer.js         # WebRTC wrapper
+│   ├── streamer.js     # File streaming
+│   ├── progress.js     # Progress tracking
+│   └── qr.js           # QR generator
+├── public/
+│   ├── sw.js           # Service Worker
+│   └── manifest.json   # PWA manifest
+└── dist/               # Production build (deploy this)
+```
 
 ## License
 
-MIT License - Free for personal and commercial use.
+MIT License

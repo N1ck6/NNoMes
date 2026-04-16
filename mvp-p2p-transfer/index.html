@@ -58,6 +58,11 @@
             <input type="file" id="file-input">
             
             <div id="sender-waiting" class="hidden" style="margin-top:1rem;">
+                <div id="qr-container" style="text-align:center; margin:1rem 0;">
+                    <div id="qr-wrapper"></div>
+                    <p style="font-size:0.8rem; color:#64748b; margin-top:0.5rem;">Scan QR with receiver or copy code below</p>
+                </div>
+                
                 <div class="step">
                     <div class="step-title">Step 1: Share Connection Code</div>
                     <p style="font-size:0.85rem; margin-bottom:0.5rem;">Copy this code and send it to the receiver:</p>
@@ -69,7 +74,7 @@
                     <div class="step-title">Step 2: Paste Answer from Receiver</div>
                     <p style="font-size:0.85rem; margin-bottom:0.5rem;">Receiver will give you a code to paste here:</p>
                     <textarea id="sender-answer-input" placeholder="Paste answer code here..."></textarea>
-                    <button id="btn-connect-sender" class="btn" style="margin-top:0.5rem;">Connect & Send</button>
+                    <button id="btn-connect-sender" class="btn" style="margin-top:0.5rem;" disabled>Connect & Send</button>
                 </div>
                 
                 <div class="log" id="sender-log"></div>
@@ -90,6 +95,12 @@
         <div id="receiver-screen" class="card hidden">
             <h2 style="margin-bottom:1rem;">Receive File</h2>
             <div id="receiver-connect">
+                <div id="qr-scan-section" class="step hidden">
+                    <div class="step-title">Scan QR Code</div>
+                    <p style="font-size:0.85rem; margin-bottom:0.5rem;">Point camera at sender's QR code or paste code manually:</p>
+                    <button id="btn-scan-qr" class="btn btn-outline" style="margin-bottom:0.5rem;">📷 Scan QR (if supported)</button>
+                </div>
+                
                 <div class="step">
                     <div class="step-title">Step 1: Paste Offer from Sender</div>
                     <p style="font-size:0.85rem; margin-bottom:0.5rem;">Get the connection code from sender:</p>
