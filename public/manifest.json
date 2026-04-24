@@ -1,0 +1,25 @@
+{
+  "name": "NNoMes",
+  "short_name": "NNoMes",
+  "description": "Serverless peer-to-peer file transfer over LAN. No servers, no clouds, no signups.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0e1621",
+  "theme_color": "#0e1621",
+  "orientation": "portrait",
+  "scope": ".",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
